@@ -1,43 +1,55 @@
-import { Behaviour, delay, isMobileDevice, serializable } from "@needle-tools/engine";
+import { Behaviour, EventList, RGBAColor, isMobileDevice, serializable } from "@needle-tools/engine";
 import nipplejs from "nipplejs";
-import { FirstPersonController } from "./FirstPersonCharacter";
-import { Vector2 } from "three";
+import { Vector2, Color } from "three";
 
 export class MobileControls extends Behaviour {
 
-    @serializable(FirstPersonController)
-    controller?: FirstPersonController;
-
+    onlyMobile: boolean = true;
     movementSensitivity: number = 1;
     lookSensitivity: number = 5;
+    maxDoubleTapDelay: number = 200;
+
+    // @nonSerialized
+    @serializable(RGBAColor)
+    moveJoyColor!: RGBAColor;
+
+    // @nonSerialized
+    @serializable(RGBAColor)
+    lookJoyColor!: RGBAColor;
+
+    // @nonSerialized
+    @serializable(EventList)
+    onJump: EventList = new EventList();
+
+    // @nonSerialized
+    @serializable(EventList)
+    onMove: EventList = new EventList();
+
+    // @nonSerialized
+    @serializable(EventList)
+    onLook: EventList = new EventList();
 
     // See https://github.com/yoannmoinet/nipplejs for all options
-    private _movement?: nipplejs.JoystickManager;
-    private _look?: nipplejs.JoystickManager;
+    protected _movement?: nipplejs.JoystickManager;
+    protected _look?: nipplejs.JoystickManager;
 
-    private _movementIsActive = false;
-    private _movementVector!: Vector2;
-    private _lookIsActive = false;
-    private _lookVector!: Vector2;
+    protected _movementIsActive = false;
+    protected _movementVector!: Vector2;
+    protected _lookIsActive = false;
+    protected _lookVector!: Vector2;
 
-    private _htmlElements: HTMLElement[] = [];
+    protected _htmlElements: HTMLElement[] = [];
 
     awake(): void {
+        console.log(this.moveJoyColor);
+
         this._lookVector = new Vector2();
         this._movementVector = new Vector2();
     }
 
-    bindTo(controller: FirstPersonController) {
-        if (controller !== this.controller) {
-            this.onDisable();
-            this.controller = controller;
-            this.onEnable();
-        }
-    }
-
     onEnable() {
         // Onle enable touch controls on mobile
-        if (!isMobileDevice()) return;
+        if (!isMobileDevice() && this.onlyMobile) return;
 
         const dynamicContainer = document.createElement('div');
         dynamicContainer.id = 'look-joystick';
@@ -47,15 +59,21 @@ export class MobileControls extends Behaviour {
                 left: 0%;
                 width: 100%;
                 height: 100%;
+                user-select: none;
+                -webkit-user-select: none;
+                -webkit-touch-callout: none;
             `
         const staticContainer = document.createElement('div');
         staticContainer.id = 'movement-joystick';
         staticContainer.style.cssText = `
                 position: absolute;
-                top: 80%;
-                left: 0%;
-                width: 40%;
-                height: 20%;
+                bottom: 0;
+                left: 0;
+                width:  200px;
+                height: 200px;
+                user-select: none;
+                -webkit-user-select: none;
+                -webkit-touch-callout: none;
             `
         this.context.domElement.append(dynamicContainer);
         this.context.domElement.append(staticContainer);
@@ -69,6 +87,8 @@ export class MobileControls extends Behaviour {
             catchDistance: 1000,
             zone: staticContainer,
             size: 130,
+            color: this.getRGBAColorString(this.moveJoyColor),
+            fadeTime: 0,
         });
         this._movement.on('start', () => { this._movementIsActive = true; });
         this._movement.on('move', (_, data) => {
@@ -86,7 +106,8 @@ export class MobileControls extends Behaviour {
             maxNumberOfNipples: 1,
             zone: dynamicContainer,
             size: 130,
-            color: "#ffffff33",
+            color: this.getRGBAColorString(this.lookJoyColor),
+            fadeTime: 0,
         });
         this._look.on('start', () => { this._lookIsActive = true; });
         this._look.on('move', (_, data) => {
@@ -99,8 +120,8 @@ export class MobileControls extends Behaviour {
             this._lookIsActive = false;
             // double tap to jump:
             const now = Date.now();
-            if (now - lastLookEndTime < 150) {
-                this.controller?.jump();
+            if (now - lastLookEndTime < this.maxDoubleTapDelay) {
+                this.onJump?.invoke();
             }
             lastLookEndTime = now;
         });
@@ -117,12 +138,16 @@ export class MobileControls extends Behaviour {
 
     update() {
         if (this._movementIsActive) {
-            this.controller?.move(this._movementVector);
+            this.onMove?.invoke(this._movementVector);
         }
 
         if (this._lookIsActive) {
-            this.controller?.look(this._lookVector);
+            this.onLook?.invoke(this._lookVector);
         }
 
+    }
+
+    getRGBAColorString(color: RGBAColor): string {
+        return `rgba(${color.r * 255}, ${color.g * 255}, ${color.b * 255}, ${color.a})`;
     }
 }

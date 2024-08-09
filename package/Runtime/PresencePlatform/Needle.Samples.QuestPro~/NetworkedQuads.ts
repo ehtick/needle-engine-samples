@@ -1,12 +1,12 @@
-import { Behaviour, GameObject, WebXRPlaneTracking, serializable, syncField } from "@needle-tools/engine";
+import { Behaviour, GameObject, WebXRPlaneTracking, syncField } from "@needle-tools/engine";
 import { WebXRPlaneTrackingEvent } from "@needle-tools/engine";
 import { Mesh, BufferGeometry, Material, MaterialLoader, BufferGeometryLoader, Matrix4 } from "three";
 
 class MeshData {
-    pose: Matrix4;
-    geometry: BufferGeometry;
-    material: Material;
-    version: number;
+    pose?: Matrix4;
+    geometry?: BufferGeometry ;
+    material?: Material;
+    version?: number;
 }
 
 const version = 3;
@@ -28,17 +28,18 @@ export class NetworkedQuads extends Behaviour {
     private onPlaneTracking = (evt: CustomEvent<WebXRPlaneTrackingEvent>) => {
         console.error(evt.detail.context.mesh);
         const mesh = evt.detail.context.mesh as Mesh;
-        this.geometry.push({ geometry: mesh.geometry, material: mesh.material, version: version, pose: mesh.matrixWorld });
+        const material = mesh.material instanceof Array ? mesh.material[0] : mesh.material;
+        this.geometry.push({ geometry: mesh.geometry, material: material, version: version, pose: mesh.matrixWorld });
         
         // cleanup - remove outdated entries
         this.geometry = this.geometry.filter(x => x.version === version);
     }
 
-    private onNewQuads(newQuads, oldQuads) {
+    private onNewQuads(newQuads) {
         console.warn("new quads", newQuads);
     }
 
-    private onNewGeometry(newGeometry, oldGeometry) {
+    private onNewGeometry(newGeometry) {
         console.log("new geometry", this.guid, newGeometry);
 
         // add mesh to scene

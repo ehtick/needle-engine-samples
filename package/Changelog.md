@@ -4,6 +4,105 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.17.2] - 2024-06-25
+- add RequirePackage component to install unity package dependencies right from the sample scene
+- fix Bow & Arrow audio issues
+
+## [0.17.1] - 2024-06-24
+- bump engine dependency to 3.41.1-exp
+
+## [0.17.0] - 2024-06-19
+- add Jet Engine sample
+- add Body Tracking sample
+- add Car Physics sample
+- add Contact Shadows sample
+- add "Deploy To" samples: FTP, Github Pages, Glitch and Itch 
+- add Material X sample
+- add Multiple Cameras sample
+- add Panorama Controls sample
+- add Recorded Avatars sample
+- add Snow Globe sample
+- add Splines sample
+- add Summoning Animation sample
+- add USDZ Animator sample
+- add VRM Character loading sample
+- add Device Detection
+- update Particles sample, improving general gallery controls
+- update Video Playback, adding livestream showcase
+- update Reflection Probes sample
+- add ThreeTonemapping component
+- enable "Create QR Code Button" for all samples
+- update Needle Engine dependency to 3.40.0-exp.1
+- add Draco, KTX and Meshopt packages as dependencies for compressed model importing support
+- update tests to be more lenient on video and audio files when checking sample size
+
+## [0.16.0] - 2024-04-12
+- add NeedleMenu component to all samples
+- add Progressive Loading settings to relevant samples
+- add HTML Meta to all samples that were missing it
+- add pointer controls to Bow & Arrow
+- add VR support for CameraGoal (used in LOD sample)
+- add music to Multi Scenes sample
+- add music to Product Flyover
+- fix Hotspot editor multi-editing
+- fix LineDrawer creating long segments when turning with a VR controller stick
+- fix incorrect vertical position in some cases for NavMesh agents sample
+- fix DeviceSensor gyroscope sample to be more easily driven externally
+- update test for checking outdated deployments (compared to latest stable)
+- updated some skybox assets to EXR
+- update Multiple Lightmaps sample with the website house model
+- update Needle Engine to `3.36.6`
+
+## [0.15.0] - 2024-02-19
+- add Bow & Arrow sample
+- add Navmesh sample
+- fix DeviceSensor gyroscope control to work in all screen orientations and devices
+- replace old UI sprites in the Hotspot sample 
+- improve gun input in the Shooting range sample
+- add USDZ Color Menu sample
+
+## [0.14.0] - 2024-01-30
+- add Depth Sensing sample
+- add Transmission sample
+- update all XR samples (webxr2)
+- update Physics samples visuals
+- add DeployToFTP/GithubPages/Glitch samples
+- improve Device Sensor (Gyroscope) to support different device orientation
+- add external sound loading to the External Content sample
+- fix hotspot view angle in XR
+- add controls to the Lightmaps sample
+- add animation to loading scene in Multi Scenes sample
+- add Scrollytelling slider control variant 
+- add trails inheriting velocity 
+- improve Vue sample
+
+## [0.13.0] - 2023-11-06
+- fixes to FirstPersonController, Hotspots, Multi-Scenes, Networking, Stencil Portals, UI, sample scripts
+- update required Unity version to 2021.3.9f1
+- update Needle Engine to `3.22.6`
+
+## [0.12.0] - 2023-10-16
+- add Gaussian Splatting sample
+- add XR Mesh Tracking sample (e.g. on Quest 3)
+- add Worldspace UI sample
+- add mobile controls to Shooting Range sample
+- update Needle Engine to `3.20.1`
+
+## [0.11.0] - 2023-10-10
+- add Shooting Range sample
+- add Javascript Communication sample
+- add Level of detail (LOD) sample
+- add Product Flyover sample
+- add React sample
+- add Networking Room data - unreleased sample
+- add First Person Controller - Single Player
+- add HTML touch controls to First Person Controller samples
+- add Diamond Ring sample
+- change UIButton sample to Worldspace UI sample
+- update Multi-Scene content
+- update sample tags
+- update Needle Engine to `3.19.8`
+
 ## [0.10.0] - 2023-09-11
 - add Digital Landscape sample
 - add React sample

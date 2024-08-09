@@ -11,9 +11,8 @@ namespace Needle.Typescript.GeneratedComponents
 		public Needle.Engine.Components.SyncedTransform @syncedTransform;
 		public UnityEngine.Renderer @mainRenderer;
 		public float @speed = 5f;
-		public void isLocalPlayer(){}
 		public void start(){}
-		public void initialize(){}
+		// public undefined @initialize; → Could not resolve C# type
 		public void update(){}
 	}
 }

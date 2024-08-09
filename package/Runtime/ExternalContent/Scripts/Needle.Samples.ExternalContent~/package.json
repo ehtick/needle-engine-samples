@@ -2,14 +2,13 @@
   "name": "@needle-tools/external-content-samples",
   "version": "1.0.0",
   "main": "index.ts",
-  "dependencies": {},
   "peerDependencies": {
-    "@needle-tools/engine": ">= 1.0.0-pre",
-    "three": "^0.130"
-  },
+	  "@needle-tools/engine": "^3.34.2-alpha.2",
+	  "three": "npm:@needle-tools/three@^0.162.1"
+	},
   "devDependencies": {
-    "@needle-tools/engine": "^3.6.9",
-    "three": "npm:@needle-tools/three@0.146.10",
-    "@types/three": "0.154.0"
-  }
+	  "@needle-tools/engine": "^3.34.2-alpha.2",
+	  "@types/three": "0.162.0",
+	  "three": "npm:@needle-tools/three@^0.162.1"
+	}
 }

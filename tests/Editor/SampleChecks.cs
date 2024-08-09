@@ -14,12 +14,23 @@ using System;
 using System.Text.RegularExpressions;
 using Needle.Engine;
 using Needle.Engine.Deployment;
+using Needle.Engine.Projects;
+using Needle.Engine.Samples.Helpers;
 using Object = UnityEngine.Object;
+using Actions = Needle.Engine.Actions;
+using Needle.Engine.Components;
+using Needle.Typescript.GeneratedComponents;
+using Needle.Engine.Utils;
+using Newtonsoft.Json.Linq;
 
 namespace SampleChecks
 {
     internal class SampleChecks
     {
+        internal const string ProductionStateCategoryName = "Deployments";
+        internal const string PublicInfoCategoryName = "Docs";
+        internal const string CodeCategoryName = "Code";
+
         internal static List<SampleInfo> GetSamples()
         {
             return AssetDatabase.FindAssets("t:SampleInfo")
@@ -33,16 +44,19 @@ namespace SampleChecks
             "node_modules",
         };
 
+
         [Test]
         public async Task NoGzipDeployments()
         {
-            const string validateUrl = "https://engine.needle.tools/samples/__validate";
+            const string validateUrl = "https://engine.needle.tools/samples-uploads/__validate"; 
             var request = UnityWebRequest.Get(validateUrl);
             request.timeout = 5;
             
             var operation = request.SendWebRequest();
             while (!operation.isDone)
                 await Task.Yield();
+            
+            Assert.True(request.result == UnityWebRequest.Result.Success, "Can't reach validation endpoint");
             
             var result = request.downloadHandler.text;
             var warningCount = Regex.Matches(result, Regex.Escape("WARNING")).Count;
@@ -61,15 +75,30 @@ namespace SampleChecks
     internal class @_
     {
         private readonly SampleInfo sample;
-        private const string PublicInfoCategoryName = "Docs and Deployments";
         
         public @_(SampleInfo sampleInfo)
         {
             sample = sampleInfo;
         }
+
+        const string AutoGenerateBeforeTestsKey = nameof(TempProject) + "_" + nameof(TempProject.AllowAutoGenerate) + "_BeforeTests";
+        
+        [SetUp]
+        public void Setup()
+        {
+            SessionState.SetBool(AutoGenerateBeforeTestsKey, TempProject.AllowAutoGenerate);
+            TempProject.AllowAutoGenerate = false;
+        }
+        
+        [TearDown]
+        public void TearDown()
+        {
+            TempProject.AllowAutoGenerate = SessionState.GetBool(AutoGenerateBeforeTestsKey, true);
+            SessionState.EraseBool(AutoGenerateBeforeTestsKey);
+        }
         
         [Test]
-        [Category(PublicInfoCategoryName)]
+        [Category(SampleChecks.ProductionStateCategoryName)]
         public async Task IsLive()
         {
             var sampleLiveUrl = sample.LiveUrl;
@@ -86,12 +115,41 @@ namespace SampleChecks
             Assert.That(request.responseCode, Is.EqualTo(200), "Sample is not live: " + sample.name + " at " + sampleLiveUrl);
         }
 
-        // TODO this could be based on the current package version and e.g. only allow 2-3 minor version deviations
-        private const int RequiredMajorVersion = 3;
-        private const int RequiredMinorVersion = 4;
-        
+        /// <summary>
+        /// Needle Engine package versions from oldest to newest
+        /// </summary>
+        static List<(int major, int minor, int patch, string suffix, string version)> enginePackageVersions;
+
+        async Task GetEngineVersionsIfNeeded()
+        {
+            if (enginePackageVersions != null)
+                return;
+
+            enginePackageVersions = new();
+
+            var enginePackageInfo = await NpmUtils.TryGetCompletePackageInfo("@needle-tools/engine");
+            if (!enginePackageInfo.TryGetValue("versions", out var versionsObject))
+                Assert.Inconclusive("Can't parse needle engine package info");
+
+            var versionRoot = enginePackageInfo["versions"] as JObject;
+            foreach (var x in versionRoot)
+            {
+                if (GetSemVersion(x.Key, out int _major, out int _minor, out int _patch, out string _suffix))
+                {
+                    enginePackageVersions.Add((_major, _minor, _patch, _suffix, x.Key));
+                }
+            }
+
+            enginePackageVersions.OrderBy(x => x.major)
+                                 .ThenBy(x => x.minor)
+                                 .ThenBy(x => x.patch)
+                                 .ThenBy(x => x.suffix)
+                                 .ToList();
+        }
+
+
         [Test]
-        [Category(PublicInfoCategoryName)]
+        [Category(SampleChecks.ProductionStateCategoryName)]
         public async Task VersionIsNotTooOld()
         {
             // fetch the HTML page
@@ -110,35 +168,59 @@ namespace SampleChecks
 
             // create a regex for this that extracts the content
             // <meta name="needle-engine" content="3.5.8-alpha">
-            var regex = new System.Text.RegularExpressions.Regex("<meta name=\"needle-engine\" content=\"(?<version>.*)\">");
+            var regex = new Regex("<meta name=\"needle-engine\" content=\"(?<version>.*)\">");
             var match = regex.Match(html);
             var version = match.Groups["version"].Value;
-            
-            // regex check with matches for major/minor/patch-pre so that we can use these as matches
-            var regex2 = new System.Text.RegularExpressions.Regex(@"(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)(-(?<suffix>\w+))?"); 
-            match = regex2.Match(version);
-            var major = match.Groups["major"].Value;
-            var minor = match.Groups["minor"].Value;
-            var patch = match.Groups["patch"].Value;    
-            var pre = match.Groups["suffix"].Value;
-            
-            // TODO proper SemVer check
-            var isSemver = !string.IsNullOrEmpty(major) && !string.IsNullOrEmpty(minor) && !string.IsNullOrEmpty(patch);
 
-            Debug.Log("Version: " + version);
-            if (!isSemver)
-            {
+            // regex check with matches for major/minor/patch-pre so that we can use these as matches
+            if (!GetSemVersion(version, out var major, out var minor, out var patch, out var suffix))
                 Assert.Inconclusive("Version not detected in the HTML meta tags of the live sample. That usually means the used Needle Engine version is too old.");
-            }
-            else
+
+            Debug.Log($"Deployment version: {major}.{minor}.{patch}");
+
+
+            await GetEngineVersionsIfNeeded();
+
+            var stableReleases = enginePackageVersions.Where(x => string.IsNullOrEmpty(x.suffix));
+            var lastStable = stableReleases.LastOrDefault();
+
+            Assert.IsNotNull(lastStable, "Can't determine last stable package version");
+
+            Debug.Log($"Latest stable version: {lastStable.version}");
+
+            // semantically check if deployment isn't behind a stable release
+            var errorMsg = $"Version is too old ({version}). Latest stable version is newer then the deployment {lastStable.version}";
+            Assert.GreaterOrEqual(major, lastStable.major, errorMsg);
+
+            if (major == lastStable.major)
             {
-                Assert.GreaterOrEqual(int.Parse(major), RequiredMajorVersion, "Version is too old: " + version);
-                Assert.GreaterOrEqual(int.Parse(minor), RequiredMinorVersion, "Version is too old: " + version);
+                Assert.GreaterOrEqual(minor, lastStable.minor, errorMsg);
+                if(minor == lastStable.minor)
+                {
+                    Assert.GreaterOrEqual(patch, lastStable.patch, errorMsg);
+                    // TODO:check for suffix
+                }
             }
         }
 
+        bool GetSemVersion(string input, out int major, out int minor, out int patch, out string suffix)
+        {
+            var regex = new Regex(@"(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)(-(?<suffix>\w+))?");
+            var match = regex.Match(input);
+            var majorText = match.Groups["major"]?.Value ?? "";
+            var minorText = match.Groups["minor"]?.Value ?? "";
+            var patchText = match.Groups["patch"]?.Value ?? "";
+
+            major = -1;
+            minor = -1;
+            patch = -1;
+            suffix = match.Groups["suffix"].Value;
+
+            return int.TryParse(majorText, out major) && int.TryParse(minorText, out minor) && int.TryParse(patchText, out patch);
+        } 
+
         [Test]
-        [Category(PublicInfoCategoryName)]
+        [Category(SampleChecks.PublicInfoCategoryName)]
         public void HasValidInfo()
         {
             Assert.True(sample.Thumbnail, "No thumbnail");
@@ -163,28 +245,66 @@ namespace SampleChecks
         }
 
         [Test]
-        [Category(PublicInfoCategoryName)]
+        [Category(SampleChecks.PublicInfoCategoryName)]
         public void HasReadme()
         {
+            // simple check if the file exists
             var sampleDirectory = AssetDatabase.GetAssetPath(sample.Scene);
             sampleDirectory = Path.GetDirectoryName(sampleDirectory);
             if (sampleDirectory == null) return;
             var readmePath = Path.Combine(sampleDirectory, "README.md");
             Assert.IsTrue(File.Exists(readmePath), "No README.md found");
             
-            // TODO maybe we can rename it directly here to avoid issues
-            Assert.IsTrue(Directory.GetFileSystemEntries(sampleDirectory, "README.md").FirstOrDefault() != null, "File should be called README.md (uppercase)");
+            // we need to ensure it's actually called README.md and not readme.md or Readme.md or something else
+            var filesystemEntries = Directory.GetFileSystemEntries(sampleDirectory, "README.md");
+            var first = filesystemEntries.FirstOrDefault();
+            Assert.IsTrue(first != null && first.EndsWith("README.md", StringComparison.Ordinal), "File should be called README.md (uppercase)");
         }
 
         [Test]
-        [Category(PublicInfoCategoryName)]
+        [Category(SampleChecks.PublicInfoCategoryName)]
         public void HasReadmeComponent()
         {
             OpenSceneAndCopyIfNeeded();
-
-            var readme = GameObject.FindObjectOfType<Readme>();
+            
+            var readme = Object.FindAnyObjectByType<Readme>();
             Assert.IsNotNull(readme);
-            Assert.IsFalse(string.IsNullOrEmpty(readme?.Guid));
+            Assert.IsFalse(string.IsNullOrEmpty(readme.Guid));
+            Assert.IsTrue(readme.CompareTag("EditorOnly"), "Readme component should be tagged as EditorOnly.");
+            Assert.AreEqual(1, readme.gameObject.GetComponents<Component>().Length - 1, "Readme GameObject has too many components, should only have Readme");
+        }
+
+        [Test]
+        public void HasNeedleMenuAndShowsLogo()
+        {
+            OpenSceneAndCopyIfNeeded();
+
+            var menu = Object.FindAnyObjectByType<NeedleMenu>();
+            Assert.IsNotNull(menu, "NeedleMenu is missing in the scene");
+            Assert.IsTrue(menu.ShowNeedleLogo, $"NeedleMenu should have {nameof(NeedleMenu.ShowNeedleLogo)} enabled.");
+        }
+
+        [Test]
+        public void HasHTMLMetaComponent()
+        {
+            OpenSceneAndCopyIfNeeded();
+
+            var components = Object.FindObjectsByType<HtmlMeta>(FindObjectsSortMode.None);
+            Assert.IsTrue(components.Length > 0, "Scene is missing HTML Meta component");
+            Assert.IsTrue(components.Length == 1, "Scene has multiple HTML Meta components");
+
+            var meta = components.FirstOrDefault()?.meta;
+
+            Assert.IsNotNull(meta, "Meta or component is null, unexpected.");
+
+            // get default value of meta.meta.title
+            var defaultValues = new HtmlMeta.Meta();
+
+            Assert.IsNotNull(meta.image, "No image");
+            Assert.False(meta.title.Equals(defaultValues.title), "Default title");
+            Assert.False(string.IsNullOrEmpty(meta.title), "No title");
+            Assert.False(meta.description.Equals(defaultValues.description), "Default description");
+            Assert.False(string.IsNullOrEmpty(meta.description), "No description");
         }
 
         static string[] GetDependencies(Object obj)
@@ -205,18 +325,33 @@ namespace SampleChecks
             return dependencies;
         }
 
+        static string[] nonSizeRestrictedExtensions =
+        {
+            ".mp4",
+            ".webm",
+            ".mp3",
+            ".wav"
+        };
+
         [Test]
         public void DependencySizeBelow10MB()
         {
             var dependencies = GetDependencies(sample.Scene);
-            
+            var nonSizeRestricted = dependencies.Where(x => nonSizeRestrictedExtensions.Any(y => x.EndsWith(y)));
+            var sizeRestricted = dependencies.Where(x => !nonSizeRestricted.Contains(x));
+
             // summarize file size of all of them
-            var size = dependencies.Sum(dependency => File.Exists(dependency) ? new FileInfo(dependency).Length : 0);
-            
+            var restrictedSize = sizeRestricted.Sum(dependency => File.Exists(dependency) ? new FileInfo(dependency).Length : 0);
+            var nonRestrictedSize = nonSizeRestricted.Sum(dependency => File.Exists(dependency) ? new FileInfo(dependency).Length : 0);
+
             // check if below 10 MB
-            var sizeInMb = size / 1024f / 1024f;
-            AssertFileSize(sizeInMb, 10, dependencies.ToList(), "Dependency size is too large");
-            Debug.Log($"Dependency size: {sizeInMb:F2} MB");
+            var restrictedSizeMB = restrictedSize / 1024f / 1024f;
+            var nonRestrictedSizeMB = nonRestrictedSize / 1024f / 1024f;
+
+            AssertFileSize(restrictedSizeMB, 10, sizeRestricted.ToList(), "Dependency size is too large", true);
+            AssertFileSize(restrictedSizeMB + nonRestrictedSizeMB, 10, nonSizeRestricted.ToList(), "Dependency size is critical", false);
+
+            Debug.Log($"Dependency size: {restrictedSizeMB + nonRestrictedSizeMB:F2} MB");
         }
 
         [Test]
@@ -243,16 +378,21 @@ namespace SampleChecks
         private void OpenSceneAndCopyIfNeeded()
         {
             var path = AssetDatabase.GetAssetPath(sample.Scene);
+            OpenSceneAndCopyIfNeeded(path);
+        }
+        
+        internal static void OpenSceneAndCopyIfNeeded(string path)
+        {
             Assert.IsTrue(File.Exists(path), "Scene file doesn't exist");
 
             // immutable scenes can't be opened (e.g. from installed sample package)
             // so we're making a mutable copy here to run tests on it.
             // to simplify things, we're always making a copy right now.
-            var sceneIsImmutableAndNeedsCopy = true;
+            var makeSceneCopy = true;
             var scenePath = path;
             
             // ReSharper disable once ConditionIsAlwaysTrueOrFalse
-            if (sceneIsImmutableAndNeedsCopy)
+            if (makeSceneCopy)
             {
                 // create new unique path in Assets to copy the scene to
                 var sceneName = Path.GetFileName(path);
@@ -262,13 +402,21 @@ namespace SampleChecks
             }
             
             // open the temp scene
-            EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single); 
+            EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
+            SampleUpdater.PatchActiveScene();
 
             // remove the mutable copy of the immutable scene
             // ReSharper disable once ConditionIsAlwaysTrueOrFalse
-            if (sceneIsImmutableAndNeedsCopy)
+            if (makeSceneCopy)
             {
-                AssetDatabase.DeleteAsset(scenePath);
+                if (!AssetDatabase.DeleteAsset(scenePath))
+                {
+                    AssetDatabase.Refresh();
+                    if (!AssetDatabase.DeleteAsset(scenePath))
+                    {
+                        Debug.LogWarning($"can't delete scene: {scenePath}");
+                    }
+                }
             }
         }
 
@@ -304,7 +452,7 @@ namespace SampleChecks
             OpenSceneAndCopyIfNeeded();
 
             // explicitly get the DeployToFTP component so we can check the path
-            var deployToFtps = Object.FindObjectsOfType<DeployToFTP>();
+            var deployToFtps = Object.FindObjectsByType<DeployToFTP>(FindObjectsSortMode.None);
             Assert.LessOrEqual(deployToFtps.Length, 1, "More than one DeployToFTP component found");
 
             // We want to avoid accidentally keeping staging paths in the scene
@@ -320,7 +468,7 @@ namespace SampleChecks
             var allDeploymentComponentsInScene = new List<MonoBehaviour>();
             foreach (var deploymentType in deploymentTypes)
             {
-                var components = Object.FindObjectsOfType(deploymentType) as MonoBehaviour[];
+                var components = Object.FindObjectsByType(deploymentType, FindObjectsInactive.Include, FindObjectsSortMode.None) as MonoBehaviour[];
                 if (components == null) continue;
                 allDeploymentComponentsInScene.AddRange(components);
             }
@@ -328,7 +476,7 @@ namespace SampleChecks
             Assert.LessOrEqual(allDeploymentComponentsInScene.Count, 1, "Too many deployment components found: " + string.Join(", ", allDeploymentComponentsInScene.Select(x => x.GetType().Name)));
         }
 
-        private static void GetFiles(string path, List<FileInfo> results)
+        internal static void GetFiles(string path, List<FileInfo> results)
         {
             var di = new DirectoryInfo(path);
             if (!di.Exists)
@@ -372,13 +520,9 @@ namespace SampleChecks
                 .Where(x => !SampleChecks.ignoreSizeFolderNames.Any(ignoredFolder => x.FullName.Contains(ignoredFolder)))
                 .ToList();
 
-            // calculate total file size
-            var size = fileInfos.Sum(file => file.Exists ? file.Length : 0);
-            
             // runtime folder asset: 17ecbeb2072245a44ad506ab94d30db5
             var packageFolderPath = Path.GetDirectoryName(Path.GetFullPath(AssetDatabase.GUIDToAssetPath("17ecbeb2072245a44ad506ab94d30db5")));
-            
-            var files = fileInfos.Select(fi =>
+            var files = fileInfos.Where(x => x.Exists).Select(fi =>
             {
                 // convert to package-relative path, we know all files are inside the Samples package here.
                 var f = fi.FullName;
@@ -387,22 +531,114 @@ namespace SampleChecks
                 f = f.Replace("\\", "/");
                 return "Packages/com.needle.engine-samples/" + f;
             }).ToList();
+
+            var nonSizeRestricted = files.Where(x => nonSizeRestrictedExtensions.Any(y => x.EndsWith(y)));
+            var sizeRestricted = files.Where(x => !nonSizeRestricted.Contains(x));
+
+            // summarize file size of all of them
+            var restrictedSize = sizeRestricted.Sum(file => file.Length);
+            var nonRestrictedSize = nonSizeRestricted.Sum(file => file.Length);
+
+            // check if below 10 MB
+            var restrictedSizeMB = restrictedSize / 1024f / 1024f;
+            var nonRestrictedSizeMB = nonRestrictedSize / 1024f / 1024f;
             
             // check if below 10 MB
-            var sizeInMb = size / 1024f / 1024f;
-            AssertFileSize(sizeInMb, 10, files, "Folder size is too large");
-            Debug.Log($"Folder size: {sizeInMb:F2} MB");
+            AssertFileSize(restrictedSizeMB, 10, files, "Folder size is too large", true);
+            AssertFileSize(restrictedSizeMB + nonRestrictedSizeMB, 10, files, "Folder size is critical", false);
+            Debug.Log($"Folder size: {restrictedSizeMB + nonRestrictedSizeMB:F2} MB");
         }
 
-        private void AssertFileSize(float sizeInMb, float allowedSize, List<string> files, string message)
+        private void AssertFileSize(float sizeInMb, float allowedSize, List<string> files, string message, bool assert)
         {
-            Assert.LessOrEqual(sizeInMb, allowedSize,
-                $"{message}: {sizeInMb:F2} MB. List of files ({files.Count}): \n" + string.Join("\n",
-                    files
-                        .Select(x => (path: x, fileInfo: new FileInfo(x)))
-                        .OrderByDescending(f => f.fileInfo.Length)
-                        .Select(fi => $"[{(fi.fileInfo.Length / 1024f / 1024f):F2} MB] {fi.path}")
-                ));
+            var t = $"{message}: {sizeInMb:F2} MB. List of files ({files.Count}): \n" + string.Join("\n",
+                files
+                    .Select(x => (path: x, fileInfo: new FileInfo(x)))
+                    .OrderByDescending(f => f.fileInfo.Length)
+                    .Select(fi => $"[{(fi.fileInfo.Length / 1024f / 1024f):F2} MB] {fi.path}")
+            );
+
+            if (assert) 
+            {
+                Assert.LessOrEqual(sizeInMb, allowedSize, t);
+            }
+            else if (sizeInMb > allowedSize)
+            {
+                Assert.Inconclusive(t);
+            }
+        }
+
+        [Test]
+        public void ValidNPMDefReferences()
+        {
+            OpenSceneAndCopyIfNeeded();
+
+            var info = Object.FindAnyObjectByType<ExportInfo>();
+            Assert.IsNotNull(info);
+
+            info.Dependencies.ForEach(x =>
+            {
+                var path = AssetDatabase.GUIDToAssetPath(x.Guid);
+                Assert.IsNotEmpty(path, $"Npmdef called \"{x.Name}\" is referenced with missing guid");
+            });
+        }
+
+        string[] tempProjectsNames = new string[]
+        {
+            "Library/Needle/Sample"
+        };
+
+        [Test]
+        public void ProjectLocation()
+        {
+            OpenSceneAndCopyIfNeeded();
+
+            var info = Object.FindAnyObjectByType<ExportInfo>();
+            Assert.IsNotNull(info, "No ExportInfo found! Invalid scene.");
+            if (!string.IsNullOrEmpty(info.RemoteUrl))
+                Assert.Pass("Is remote");
+
+            var path = info.DirectoryName;
+
+            if (path.Contains(@"WebProjects~"))
+                Assert.Pass();
+            else if (tempProjectsNames.Contains(path))
+                Assert.Pass();
+            else
+                Assert.Fail(@$"Project {path} is not a valid temp project or is not located in the correct directory (package\WebProjects~)");
+        }
+
+        [Test]
+        [Category(SampleChecks.CodeCategoryName)]
+        public async Task TypescriptCompiles()
+        {
+            OpenSceneAndCopyIfNeeded();
+
+            var info = Object.FindAnyObjectByType<ExportInfo>();
+            Assert.IsNotNull(info, "No ExportInfo found! Invalid scene.");
+
+            var path = info.GetProjectDirectory();
+
+            // Remote
+            if (!Directory.Exists(info.DirectoryName) && !string.IsNullOrWhiteSpace(info.RemoteUrl))
+            {
+                Debug.Log($"Cloning: {info.RemoteUrl}");
+
+                Assert.IsTrue(await GitActions.CloneProject(info), "Failed cloning a remote template");
+                path = info.DirectoryName;
+            }
+            else // Local
+            {
+                Actions.EnsureDependenciesAreAddedToPackageJson(info);
+            }
+
+            Debug.Log($"Installing {path}");
+
+            Assert.IsTrue(await Actions.RunNpmInstallAtPath(path, false), "Failed while installing.");
+
+            Debug.Log($"Compiling {path}");
+
+            Assert.IsTrue(await Actions.TryCompileTypescript(path));
         }
     }
 }

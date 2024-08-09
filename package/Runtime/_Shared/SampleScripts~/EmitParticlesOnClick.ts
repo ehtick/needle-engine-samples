@@ -1,5 +1,6 @@
 // START MARKER Emit Particles On Click
-import { InputEvents, setWorldPosition, Behaviour, GameObject, Gizmos, ParticleSystem, getParam, serializeable, showBalloonMessage, showBalloonWarning } from "@needle-tools/engine";
+import { setWorldPosition, Behaviour, GameObject, Gizmos, ParticleSystem, getParam, serializeable, NeedleXREventArgs } from "@needle-tools/engine";
+import { Vector3 } from "three";
 
 const debug = getParam("sample_debugParticlesOnClick");
 
@@ -8,23 +9,34 @@ export class EmitParticlesOnClick extends Behaviour {
     @serializeable(ParticleSystem)
     particleSystems: ParticleSystem[] = [];
 
-    awake() {
-        this.context.input.addEventListener(InputEvents.PointerUp, evt => {
-            // TODO: make work for XR
+    update(): void {
+        if(!this.context.isInVR && this.context.input.getPointerClicked(0)) {
             const hits = this.context.physics.raycast();
-            if (hits.length) {
-                const hit = hits[0];
-                setWorldPosition(this.gameObject, hit.point);
-                if(debug)
-                    Gizmos.DrawWireSphere(hit.point, 0.5, 0xff0000, 1);
-                for (const ps of this.particleSystems) {
-                    if(!ps) continue;
-                    GameObject.setActive(ps.gameObject, true);
-                    ps.play();
+            if(hits.length > 0) {
+                this.spawnParticlesAt(hits[0].point);
+            }
+        }  
+    }
+    onUpdateXR(args: NeedleXREventArgs) {
+        args.xr.controllers.forEach((controller) => {
+            if (controller.getButton("primary")?.isDown === true) {
+                const hit = this.context.physics.raycastFromRay(controller.ray)?.at(0);
+                if(hit) {
+                    this.spawnParticlesAt(hit.point);   
                 }
             }
-            else if(this.context.isInAR) showBalloonWarning("Nothing hit: " + JSON.stringify(evt));
         });
+    }
+
+    spawnParticlesAt(pos: Vector3) {
+        setWorldPosition(this.gameObject, pos);
+        if(debug)
+            Gizmos.DrawWireSphere(pos, 0.5, 0xff0000, 1);
+        for (const ps of this.particleSystems) {
+            if(!ps) continue;
+            GameObject.setActive(ps.gameObject, true);
+            ps.play();
+        }
     }
 }
 // END MARKER Emit Particles On Click

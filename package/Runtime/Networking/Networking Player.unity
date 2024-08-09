@@ -154,6 +154,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.EventSystems.StandaloneInputModule, UnityEngine.UI
     $ GlobalObjectId_V1-2-375db29c7005fb54587043b09654568b-140076388-0
+  m_SendPointerHoverToParent: 1
   m_HorizontalAxis: Horizontal
   m_VerticalAxis: Vertical
   m_SubmitButton: Submit
@@ -187,11 +188,12 @@ Transform:
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &603718267
+--- !u!1 &570664635
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -199,43 +201,29 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 603718268}
-  - component: {fileID: 603718269}
+  - component: {fileID: 570664636}
   m_Layer: 0
-  m_Name: Instructions
+  m_Name: Spawn spot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &603718268
+--- !u!4 &570664636
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 603718267}
+  m_GameObject: {fileID: 570664635}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 619865973}
-  m_RootOrder: 5
+  m_Father: {fileID: 2016998137}
+  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &603718269
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 603718267}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c7fcf189c1d89f0d42f86e4554d90e27, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Needle.Typescript.GeneratedComponents.ShowBalloonMessage,
-    Needle.Engine-Samples.Runtime $ GlobalObjectId_V1-2-375db29c7005fb54587043b09654568b-603718269-0
-  text: Click or touch anywhere on the floor to move your player!
 --- !u!1 &619865971
 GameObject:
   m_ObjectHideFlags: 0
@@ -278,13 +266,13 @@ Transform:
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1791489694}
   - {fileID: 869501961}
   - {fileID: 930688385}
   - {fileID: 2016998137}
-  - {fileID: 1105934721}
-  - {fileID: 603718268}
+  - {fileID: 1664320033}
   m_Father: {fileID: 0}
   m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -305,6 +293,7 @@ MonoBehaviour:
   joinRandomRoom: 1
   requireRoomParameter: 0
   autoRejoin: 1
+  createJoinButton: 1
 --- !u!1 &671381873
 GameObject:
   m_ObjectHideFlags: 0
@@ -317,6 +306,7 @@ GameObject:
   - component: {fileID: 671381875}
   - component: {fileID: 671381874}
   - component: {fileID: 671381877}
+  - component: {fileID: 671381878}
   m_Layer: 0
   m_Name: Export Info
   m_TagString: EditorOnly
@@ -352,13 +342,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Needle.Engine.ExportInfo, Needle.Engine.Common $ GlobalObjectId_V1-2-375db29c7005fb54587043b09654568b-671381875-0
   DirectoryName: Library/Needle/Sample
+  RemoteUrl: 
   AutoExport: 1
+  AutoCompress: 1
   Dependencies:
-  - Name: samplescripts
+  - Name: '@needle-tools/samples-scripts'
     VersionOrPath: Packages/com.needle.engine-samples/Runtime/_Shared/SampleScripts.npmdef
     Guid: a54d66e790a1fe74b86cebd5eae8145d
   - Name: networking
-    VersionOrPath: Packages/com.needle.engine-samples/Runtime/Networking/_Shared/Scripts/Networking.npmdef
+    VersionOrPath: Packages/com.needle.engine-samples/Runtime/Networking/Scripts/Networking.npmdef
     Guid: f5f841d7349973a40a7466d20037c65a
 --- !u!4 &671381876
 Transform:
@@ -370,6 +362,7 @@ Transform:
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 0
@@ -391,6 +384,23 @@ MonoBehaviour:
   Path: /networking_players
   OverrideGzipCompression: 1
   UseGzipCompression: 0
+--- !u!114 &671381878
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 671381873}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cf2ffc5481d126c498a97e14b35c2fb0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Needle.Engine.HtmlMeta, Needle.Engine.Meta
+  meta:
+    title: Networking Players
+    description: Spawn and control players - this sample also shows the lifecycle
+      of networked players
+    image: {fileID: 2800000, guid: 158af30540f9b44449bfdfef82acc1a4, type: 3}
 --- !u!1 &869501959
 GameObject:
   m_ObjectHideFlags: 0
@@ -402,6 +412,7 @@ GameObject:
   - component: {fileID: 869501961}
   - component: {fileID: 869501960}
   - component: {fileID: 869501962}
+  - component: {fileID: 869501963}
   m_Layer: 0
   m_Name: Directional Light
   m_TagString: Untagged
@@ -481,6 +492,7 @@ Transform:
   m_LocalRotation: {x: -0.44684628, y: 0.31690383, z: -0.17321481, w: -0.8184723}
   m_LocalPosition: {x: 20.6, y: 49.3, z: -22.6}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 619865973}
   m_RootOrder: 1
@@ -505,6 +517,27 @@ MonoBehaviour:
   shadowBias: 0.00001
   shadowNormalBias: 0.03
   _overrideShadowBiasSettings: 1
+--- !u!114 &869501963
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 869501959}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.Rendering.Universal.UniversalAdditionalLightData,
+    Unity.RenderPipelines.Universal.Runtime
+  m_Version: 1
+  m_UsePipelineSettings: 1
+  m_AdditionalLightsShadowResolutionTier: 2
+  m_LightLayerMask: 1
+  m_CustomShadowLayers: 0
+  m_ShadowLayerMask: 1
+  m_LightCookieSize: {x: 1, y: 1}
+  m_LightCookieOffset: {x: 0, y: 0}
 --- !u!1 &930688384
 GameObject:
   m_ObjectHideFlags: 0
@@ -534,6 +567,7 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 3.9083, y: 1, z: 3.9274}
+  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 619865973}
   m_RootOrder: 2
@@ -562,6 +596,7 @@ MeshRenderer:
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
   m_MotionVectors: 1
   m_LightProbeUsage: 1
   m_ReflectionProbeUsage: 1
@@ -600,11 +635,56 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 930688384}
   m_Mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
---- !u!224 &1105934721 stripped
-RectTransform:
-  m_CorrespondingSourceObject: {fileID: 1857120975290165679, guid: b63cd8cc3c1b46349bf2980f50bdbedc, type: 3}
-  m_PrefabInstance: {fileID: 1857120976361476142}
+--- !u!1 &1664320032
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1664320033}
+  - component: {fileID: 1664320034}
+  m_Layer: 0
+  m_Name: NeedleMenu
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1664320033
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1664320032}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 619865973}
+  m_RootOrder: 4
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1664320034
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1664320032}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6d2c67ae7e4416a98aa03d96398832b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Needle.Engine.Components.NeedleMenu, Needle.Engine
+  _position: 1
+  ShowNeedleLogo: 1
+  CreateFullscreenButton: 1
+  CreateMuteButton: 0
+  CreateQRCodeButton: 1
+  ShowSpatialMenu: 1
 --- !u!1 &1791489691
 GameObject:
   m_ObjectHideFlags: 0
@@ -686,6 +766,7 @@ Transform:
   m_LocalRotation: {x: 0.0006386306, y: 0.93717134, z: -0.34886482, w: 0.0016788489}
   m_LocalPosition: {x: 0.64483505, y: 14.165065, z: 15.974578}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 619865973}
   m_RootOrder: 0
@@ -737,18 +818,27 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Needle.Engine.Components.OrbitControls, Needle.Engine
     $ GlobalObjectId_V1-2-375db29c7005fb54587043b09654568b-1791489696-0
+  autoTarget: 1
+  autoFit: 0
+  enableRotate: 1
   autoRotate: 0
   autoRotateSpeed: 0.2
-  enableKeys: 0
-  enableDamping: 1
-  dampingFactor: 0.1
+  minPolarAngle: 0
+  maxPolarAngle: 3.1415927
+  minAzimuthAngle: Infinity
+  maxAzimuthAngle: Infinity
   enableZoom: 1
   minZoom: 0
   maxZoom: Infinity
   enablePan: 1
-  lookAtConstraint: {fileID: 0}
+  enableDamping: 1
+  dampingFactor: 0.1
+  targetLerpDuration: 1
+  enableKeys: 0
   middleClickToFocus: 1
   doubleClickToFocus: 1
+  allowInterrupt: 1
+  lookAtConstraint: {fileID: 0}
 --- !u!1 &1819763279
 GameObject:
   m_ObjectHideFlags: 0
@@ -761,7 +851,7 @@ GameObject:
   - component: {fileID: 1819763280}
   m_Layer: 0
   m_Name: README
-  m_TagString: Untagged
+  m_TagString: EditorOnly
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -777,7 +867,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5c280f685421ecc46a892fedfe14dfa3, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier: Needle.Engine.Readme, Needle.Engine-Samples.Runtime
   Guid: 375db29c7005fb54587043b09654568b
 --- !u!4 &1819763281
 Transform:
@@ -789,6 +879,7 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 3
@@ -803,6 +894,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2016998137}
   - component: {fileID: 2016998138}
+  - component: {fileID: 2016998139}
   m_Layer: 0
   m_Name: Multiplayer
   m_TagString: Untagged
@@ -820,7 +912,9 @@ Transform:
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
-  m_Children: []
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 570664636}
   m_Father: {fileID: 619865973}
   m_RootOrder: 3
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -839,101 +933,33 @@ MonoBehaviour:
   asset: {fileID: 4541726535401666759, guid: f78dc863674d0064e8fd0487448ce05d, type: 3}
   onPlayerSpawned:
     m_PersistentCalls:
-      m_Calls: []
---- !u!1001 &1857120976361476142
-PrefabInstance:
+      m_Calls:
+      - m_Target: {fileID: 2016998139}
+        m_TargetAssemblyTypeName: Needle.Typescript.GeneratedComponents.SpawnSpotHandler,
+          Needle.Engine-Samples.Runtime
+        m_MethodName: handlePlayerSpawn
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+--- !u!114 &2016998139
+MonoBehaviour:
   m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    m_TransformParent: {fileID: 619865973}
-    m_Modifications:
-    - target: {fileID: 1857120975290165678, guid: b63cd8cc3c1b46349bf2980f50bdbedc, type: 3}
-      propertyPath: m_Name
-      value: RoomUI
-      objectReference: {fileID: 0}
-    - target: {fileID: 1857120975290165679, guid: b63cd8cc3c1b46349bf2980f50bdbedc, type: 3}
-      propertyPath: m_Pivot.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1857120975290165679, guid: b63cd8cc3c1b46349bf2980f50bdbedc, type: 3}
-      propertyPath: m_Pivot.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1857120975290165679, guid: b63cd8cc3c1b46349bf2980f50bdbedc, type: 3}
-      propertyPath: m_RootOrder
-      value: 4
-      objectReference: {fileID: 0}
-    - target: {fileID: 1857120975290165679, guid: b63cd8cc3c1b46349bf2980f50bdbedc, type: 3}
-      propertyPath: m_AnchorMax.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1857120975290165679, guid: b63cd8cc3c1b46349bf2980f50bdbedc, type: 3}
-      propertyPath: m_AnchorMax.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1857120975290165679, guid: b63cd8cc3c1b46349bf2980f50bdbedc, type: 3}
-      propertyPath: m_AnchorMin.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1857120975290165679, guid: b63cd8cc3c1b46349bf2980f50bdbedc, type: 3}
-      propertyPath: m_AnchorMin.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1857120975290165679, guid: b63cd8cc3c1b46349bf2980f50bdbedc, type: 3}
-      propertyPath: m_SizeDelta.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1857120975290165679, guid: b63cd8cc3c1b46349bf2980f50bdbedc, type: 3}
-      propertyPath: m_SizeDelta.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1857120975290165679, guid: b63cd8cc3c1b46349bf2980f50bdbedc, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1857120975290165679, guid: b63cd8cc3c1b46349bf2980f50bdbedc, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1857120975290165679, guid: b63cd8cc3c1b46349bf2980f50bdbedc, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1857120975290165679, guid: b63cd8cc3c1b46349bf2980f50bdbedc, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 1857120975290165679, guid: b63cd8cc3c1b46349bf2980f50bdbedc, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1857120975290165679, guid: b63cd8cc3c1b46349bf2980f50bdbedc, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1857120975290165679, guid: b63cd8cc3c1b46349bf2980f50bdbedc, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1857120975290165679, guid: b63cd8cc3c1b46349bf2980f50bdbedc, type: 3}
-      propertyPath: m_AnchoredPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1857120975290165679, guid: b63cd8cc3c1b46349bf2980f50bdbedc, type: 3}
-      propertyPath: m_AnchoredPosition.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1857120975290165679, guid: b63cd8cc3c1b46349bf2980f50bdbedc, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1857120975290165679, guid: b63cd8cc3c1b46349bf2980f50bdbedc, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1857120975290165679, guid: b63cd8cc3c1b46349bf2980f50bdbedc, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: b63cd8cc3c1b46349bf2980f50bdbedc, type: 3}
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2016998136}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 933baf789ec1adff350d88f160d759e2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Needle.Typescript.GeneratedComponents.SpawnSpotHandler,
+    Needle.Engine-Samples.Runtime
+  spawnPoints:
+  - {fileID: 570664635}
+  offsetForError: 7

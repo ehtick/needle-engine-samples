@@ -1,9 +1,9 @@
-import { Behaviour, GameObject, serializable } from "@needle-tools/engine";
-import { OrbitControls, RaycastOptions, Mathf, getWorldPosition, KeyCode, PlayerColor, ControllerEvents, WebXRController } from "@needle-tools/engine";
+import { Behaviour, GameObject, NEPointerEvent, getTempVector, serializable } from "@needle-tools/engine";
+import { RaycastOptions, Mathf, getWorldPosition, PlayerColor } from "@needle-tools/engine";
 import * as THREE from 'three';
 import { Object3D, Color, Ray, Raycaster, Vector3 } from "three";
 import { LineHandle, LinesManager } from "./LinesManager";
-import { MeshLine, MeshLineMaterial } from 'three.meshline';
+import { MeshLineMaterial } from 'three.meshline';
 
 class LineState {
     isDrawing: boolean;
@@ -36,72 +36,57 @@ export class LinesDrawer extends Behaviour {
 
     //private orbit?: OrbitControls;
 
+    onEnable(): void {
+        this.context.input.addEventListener("pointerdown", this._onPointerDown);
+        this.context.input.addEventListener("pointermove", this._onPointerMove);
+        this.context.input.addEventListener("pointerup", this._onPointerUp);
+    }
+
+    onDisable(): void {
+        this.context.input.removeEventListener("pointerdown", this._onPointerDown);
+        this.context.input.removeEventListener("pointermove", this._onPointerMove);
+        this.context.input.removeEventListener("pointerup", this._onPointerUp);        
+    }
+
+    private _onPointerDown = (args: NEPointerEvent) => {
+        if(args.button !== 0) return;
+    }
+
+    private _onPointerMove = (args: NEPointerEvent) => {
+        if(args.button !== 0) return;
+
+        if(!this.context.input.getPointerPressed(args.pointerId)) return;
+
+        this.onPointerUpdate(args);
+    }
+
+    private _onPointerUp = (args: NEPointerEvent) => {
+        if(args.button !== 0) return;
+
+        this.onPointerUpdate(args);
+    }
+
+    private onPointerUpdate(args: NEPointerEvent) {
+        const pos = args.space.getWorldPosition(getTempVector());
+        const rot = args.space.getWorldDirection(getTempVector());
+        const ray = new Ray(pos, rot);
+
+        const finish = this.context.input.getPointerUp(args.pointerId);
+
+        this.updateLine(args.pointerId.toString(), ray, true, finish, false);
+    }
+
     start() {
         if (!this.lines) {
             this.lines = GameObject.getComponent(this.gameObject, LinesManager)!;
             if (!this.lines)
                 this.lines = GameObject.addNewComponent(this.gameObject, LinesManager);
         }
-        //this.orbit = GameObject.findObjectOfType(OrbitControls, this.context) ?? undefined;
+        
         this._states["mouse"] = new LineState();
-
-
-        const xrControllerSelected: { [key: string]: boolean } = {};
-
-        WebXRController.addEventListener(ControllerEvents.SelectStart, (ctrl, _) => {
-            xrControllerSelected[ctrl.controller.uuid] = true;
-        });
-        WebXRController.addEventListener(ControllerEvents.Update, (ctrl, _) => {
-            if (xrControllerSelected[ctrl.controller.uuid] === true) {
-                const ray = ctrl.getRay();
-                this.updateLine(ctrl.controller.uuid, ray, true, false, false);
-            }
-        });
-        WebXRController.addEventListener(ControllerEvents.SelectEnd, (ctrl, _) => {
-            xrControllerSelected[ctrl.controller.uuid] = false;
-            const ray = ctrl.getRay();
-            this.updateLine(ctrl.controller.uuid, ray, true, true, false);
-        });
     }
 
     private _states: { [id: string]: LineState } = {};
-    private _isDrawing: boolean = false;
-
-    update() {
-        //if (this.orbit && this._states["mouse"]) {
-        //    if (this.orbit) this.orbit.enabled = !this._states["mouse"].isDrawing;
-        //}
-        if (!this.context.mainCamera) return;
-
-        const multi = this.context.input.getPointerPressedCount() > 1;
-        const sp = this.context.input.getPointerPositionRC(0);
-        if (!sp) return;
-
-        LinesDrawer._raycaster.setFromCamera(sp, this.context.mainCamera);
-        const ray = LinesDrawer._raycaster.ray;
-        if (!this._isDrawing) {
-            if (this.context.input.getPointerDown(0)) {
-                this._isDrawing = true;
-            }
-        }
-        else if (this.context.input.getPointerUp(0)) {
-            this._isDrawing = false;
-            const state = this._states["mouse"];
-            if(state) {
-                if (state.currentHandle) {
-                    this.lines.endLine(state.currentHandle);
-                    state.currentHandle = null;
-                    state.isDrawing = false;
-                }
-            }
-        }
-        else {
-            this.updateLine("mouse", ray,
-                this.context.input.getPointerPressed(0),
-                this.context.input.getPointerUp(0), multi || this.context.input.isKeyPressed("LeftAlt")
-            );
-        }
-    }
 
     private updateLine(id: string, ray: THREE.Ray, active: boolean, finish: boolean, cancel: boolean = false): LineState {
         let state = this._states[id];
@@ -129,7 +114,7 @@ export class LinesDrawer extends Behaviour {
                 state.maxDistance = this.context.mainCamera?.getWorldPosition(new Vector3()).length() ?? 0;
                 prev = state.maxDistance;
             }
-            if (hit) {
+            if (hit) {                
                 if (!state.currentHandle) {
                     state.maxDistance = hit.distance;
                 }
@@ -150,6 +135,17 @@ export class LinesDrawer extends Behaviour {
             }
 
             if (pt) {
+                // abort the draw if the drawn segment is too long
+                if(state.lastHit.distanceTo(pt) > 6) {
+                    if (state.currentHandle) {
+                        // this.sendLineUpdate();
+                        this.lines.endLine(state.currentHandle);
+                        state.currentHandle = null;
+
+                        return state;
+                    }
+                }
+
                 if (!state.currentHandle) {
                     let parent = state.lastParent ?? this.gameObject as THREE.Object3D;
                     if (this.addToPaintedObject && hit) parent = hit.object;
@@ -160,10 +156,7 @@ export class LinesDrawer extends Behaviour {
                 if (this.alignToSurface) {
                     if (state.prevDistance > state.maxDistance || Math.abs(prev - state.prevDistance) > 0.2) {
                         const newDistance = state.maxDistance;
-                        // if (state.maxDistance === 0) state.maxDistance = newDistance;
-                        // const camPos = getWorldPosition(this.context.mainCamera);
                         pt = ray.origin.add(ray.direction.multiplyScalar(newDistance));
-                        // pt = camPos.add(dir.multiplyScalar(newDistance));
                         state.prevDistance = newDistance;
                     }
                 }
@@ -180,7 +173,6 @@ export class LinesDrawer extends Behaviour {
     }
 
     private _raycastOptions = new RaycastOptions();
-    private static _raycaster: Raycaster = new Raycaster();
 
     private getHit(ray: THREE.Ray): THREE.Intersection | null {
         if (!this.colliders || this.colliders.length === 0) {
@@ -206,7 +198,6 @@ export class LinesDrawer extends Behaviour {
             col = PlayerColor.colorFromHashCode(PlayerColor.hashCode(this.context.connection.connectionId));
         else
             col = new THREE.Color("hsl(" + (Math.random() * 100).toFixed(0) + ", 80%, 30%)");
-        // const col = new THREE.Color("hsl(0, 100%, 50%)");
 
         return new MeshLineMaterial({
             color: col,

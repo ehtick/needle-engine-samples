@@ -1,9 +1,14 @@
 ﻿using System.IO;
 using System.Text.RegularExpressions;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+using UnityEditorInternal;
+#endif
 
 namespace Needle.Engine
 {
+    [AddComponentMenu("")]
     public class Readme : MonoBehaviour
     {
         public string Guid;
@@ -11,9 +16,21 @@ namespace Needle.Engine
 
 #if UNITY_EDITOR
 
-    [UnityEditor.CustomEditor(typeof(Readme))]
-    public class ReadmeEditor : UnityEditor.Editor
+    [CustomEditor(typeof(Readme))]
+    public class ReadmeEditor : Editor
     {
+        [MenuItem("CONTEXT/Readme/Edit Readme")]
+        private static void OpenReadme(MenuCommand cmd)
+        {
+            var readme = cmd.context as Readme;
+            if (!readme) return;
+            var path = AssetDatabase.GUIDToAssetPath(readme.Guid);
+            var root = Path.GetDirectoryName(path);
+            var readmePath = Path.GetFullPath($"{root}/README.md");
+            Debug.Log($"Opening {readmePath}");
+            InternalEditorUtility.OpenFileAtLineExternal(readmePath, 0, 0);
+        }
+        
         private string data;
         private static GUIStyle _readmeStyle;
         private static GUIContent tempContent;
@@ -38,7 +55,7 @@ namespace Needle.Engine
                 var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
                 if (scene.IsValid() && !string.IsNullOrWhiteSpace(scene.path))
                 {
-                    readme.Guid = UnityEditor.AssetDatabase.GUIDFromAssetPath(scene.path).ToString();
+                    readme.Guid = AssetDatabase.GUIDFromAssetPath(scene.path).ToString();
                     hasGuid = true;
                 }
                 else
@@ -49,7 +66,7 @@ namespace Needle.Engine
 
             if(!hasData && hasGuid)
             {
-                var path = UnityEditor.AssetDatabase.GUIDToAssetPath(readme.Guid);
+                var path = AssetDatabase.GUIDToAssetPath(readme.Guid);
                 var root = Path.GetDirectoryName(path);
                 var readmePath = $"{root}/README.md";
                 if (File.Exists(readmePath))

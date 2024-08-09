@@ -1,4 +1,4 @@
-import { Context, ContextRegistry, Interactable, SyncedTransform, delay } from "@needle-tools/engine";
+import { Context, ContextRegistry, NEEDLE_progressive, SyncedTransform } from "@needle-tools/engine";
 import { Behaviour, GameObject } from "@needle-tools/engine";
 import { Renderer } from "@needle-tools/engine";
 import { IPointerClickHandler } from "@needle-tools/engine";
@@ -7,7 +7,7 @@ import { RoomEvents } from "@needle-tools/engine";
 import { serializeable } from "@needle-tools/engine";
 import { Texture, Vector3, Quaternion } from "three";
 
-export class LightSwitch extends Interactable implements IPointerClickHandler {
+export class LightSwitch extends Behaviour implements IPointerClickHandler {
 
     private _lightmap?: LightmapConfigurations;
 
@@ -50,14 +50,10 @@ class LightmapSettings {
 //@dont-generate-component
 export class LightmapConfigurations extends Behaviour {
 
-    switchLight() {
-        this._didSwitchLightTime = Date.now();
-        this.index = this.currentIndex + 1;
-        this.context.connection.send("lightmap_index", this.currentIndex);
-    }
+    private _didSwitchLightTime: number | undefined;
 
-    private _didSwitchLightTime?: number;
-
+    cycleLigthmaps: boolean = true;
+    cycleInterval: number = 1;
     pingPong: boolean = false;
 
     //@type System.Collections.Generic.List<UnityEngine.Texture2D>
@@ -70,29 +66,58 @@ export class LightmapConfigurations extends Behaviour {
     set index(val: number) {
         this.setLightmap(val);
     }
-    get currentIndex(): number { return this._currentIndex; }
+    get index(): number { return this._index; }
+    get currentIndex(): number { return this.index; }
 
     private _intensities: { [key: string]: number } = {};
     private _forward: boolean = true;
     private _renderers: Renderer[] = [];
 
     awake() {
-        this.context.connection.beginListen("lightmap_index", (index: number) => {
-            this._didSwitchLightTime = Date.now()
-            this.setLightmap(index);
-        });
+        this.context.connection.beginListen("lightmap_index", this.onRemoteLightmapIndex);
+        this.context.connection.beginListen("lightmap_cycle", this.onRemoteLightmapCycle);
         this.context.connection.beginListen(RoomEvents.JoinedRoom, () => {
-            this.context.connection.send("lightmap_sync", { index: this.currentIndex, switchTime: this._didSwitchLightTime });
+            this.context.connection.send("lightmap_sync", { index: this.index, switchTime: this._didSwitchLightTime });
         });
         this.context.connection.beginListen("lightmap_sync", (model: { index: number, switchTime: number }) => {
             this.index = model.index;
             this._didSwitchLightTime = model.switchTime;
         });
+
+        this._renderers = GameObject.findObjectsOfType(Renderer);        
+    }
+    start() {
+        if (!this.cycleLigthmaps) {
+            this._didSwitchLightTime = Date.now();
+        }
+
+        const defaultLightmap = this.lightmaps?.at(0);
+        if (!defaultLightmap) return;
+
+        NEEDLE_progressive.assignTextureLOD(defaultLightmap, 0).then(_res => {
+            this.setLightmap(0);
+            this.startCoroutine(this.switchLightmaps());
+        });
     }
 
-    onEnable() {
-        this.startCoroutine(this.switchLightmaps());
+    onDestroy() {
+        this.context.connection.stopListen("lightmap_index", this.onRemoteLightmapIndex);
+        this.context.connection.stopListen("lightmap_cycle", this.onRemoteLightmapCycle);
     }
+
+    private onRemoteLightmapIndex = (index: number) => {
+        if(typeof index != "number") return;
+
+        this.setLightmap(index);
+        this._didSwitchLightTime = Date.now()
+    };
+
+    private onRemoteLightmapCycle = (index: number) => {
+        if(typeof index != "number") return;
+
+        this._didSwitchLightTime = undefined;
+        this.setLightmap(index);
+    };
 
     *switchLightmaps() {
         this._renderers = GameObject.findObjectsOfType(Renderer);
@@ -102,7 +127,7 @@ export class LightmapConfigurations extends Behaviour {
         }
         let i = 0;
         while (true) {
-            if (!this.lightmaps?.length) return;
+            if (!this.lightmaps?.length) continue;
             // if someone switched the light dont auto proceed
             if (!this._didSwitchLightTime || Date.now() - this._didSwitchLightTime > 600 * 1000) {
                 this._didSwitchLightTime = undefined;
@@ -118,19 +143,43 @@ export class LightmapConfigurations extends Behaviour {
                 else
                     i -= 1;
 
+                i %= this.lightmaps.length;
+
                 this.setLightmap(i);
             }
-            yield WaitForSeconds(1);//.3 + Math.random() * .5);
+            yield WaitForSeconds(this.cycleInterval);//.3 + Math.random() * .5);
         }
     }
 
-    private _currentIndex: number = -1;
+    private _index: number = -1;
+
+    switchLight() { this.nextLightmap(); }
+    nextLightmap() {
+        this._didSwitchLightTime = Date.now();
+        this.index = this.index + 1;
+        this.context.connection.send("lightmap_index", this.index);
+    }
+    previousLightmap() {
+        this._didSwitchLightTime = Date.now();
+        this.index = this.index - 1;
+        this.context.connection.send("lightmap_index", this.index);
+    }
+
+    selectLightmap(index: number) {
+        this.setLightmap(index);
+        this._didSwitchLightTime = Date.now();
+        this.context.connection.send("lightmap_index", this.index);
+    }
 
     private setLightmap(index: number) {
         if (typeof index !== "number") return;
         if (!this.lightmaps) return;
-        index %= this.lightmaps.length;
-        this._currentIndex = index;
+        if (index < 0)
+            index = this.lightmaps.length - 1;
+        else if (index >= this.lightmaps.length) {
+            index = 0;
+        }
+        this._index = index;
         for (const rend of this._renderers) {
             rend.lightmap = this.lightmaps[index];
         }
@@ -149,6 +198,12 @@ export class LightmapConfigurations extends Behaviour {
                 }
             }
         }
+    }
+
+    startCyclingLightmaps() {
+        this._didSwitchLightTime = undefined;
+        this.setLightmap(this.index + 1);
+        this.context.connection.send("lightmap_cycle", this.index);
     }
 
     private disableRendererEmission(renderer: Renderer) {

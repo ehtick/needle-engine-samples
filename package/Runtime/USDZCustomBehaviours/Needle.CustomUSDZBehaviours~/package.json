@@ -2,14 +2,13 @@
   "name": "needle.customusdzbehaviours",
   "version": "1.0.0",
   "main": "index.ts",
-  "dependencies": {},
   "peerDependencies": {
-	  "@needle-tools/engine": "^3.13.0-beta",
-	  "three": "npm:@needle-tools/three@^0.154.3"
+	  "@needle-tools/engine": "^3.34.2-alpha.2",
+	  "three": "npm:@needle-tools/three@^0.162.1"
 	},
   "devDependencies": {
-	  "@needle-tools/engine": "^3.13.0-beta",
-	  "three": "npm:@needle-tools/three@^0.154.3",
-	  "@types/three": "0.154.0"
+	  "@needle-tools/engine": "^3.34.2-alpha.2",
+	  "three": "npm:@needle-tools/three@^0.162.1",
+	  "@types/three": "0.162.0"
 	}
 }

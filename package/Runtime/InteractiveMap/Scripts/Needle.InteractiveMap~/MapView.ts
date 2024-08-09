@@ -1,7 +1,7 @@
 import { Behaviour } from "@needle-tools/engine";
 import { LODFrustum, LODRaycast, OpenStreetMapsProvider } from "geo-three";
 import { MapView } from "geo-three";
-import { Object3D, Vector3 } from "three";
+import { Object3D, Vector3, Mesh } from "three";
 
 // Documentation → https://docs.needle.tools/scripting
 
@@ -24,7 +24,7 @@ export function latLongToVector3(latitude: number, longitude: number): Vector3 {
 
 export class DisplayMap extends Behaviour {
 
-    private mapObject: Object3D;
+    private mapObject?: Object3D;
 
     // https://tentone.github.io/geo-three/docs/index.html
     onEnable(): void {
@@ -38,9 +38,10 @@ export class DisplayMap extends Behaviour {
     update() {
         // this is just to ensure the materials aren't using depth write, so 
         // we can render directly above without z-fighting.
-        this.mapObject.traverse((node) => {
-            if (!node.isMesh) return;
-            node.material.depthWrite = false;
+        this.mapObject?.traverse((node) => {
+            if (node instanceof Mesh) {
+                node.material.depthWrite = false;
+            }
         });
     }
 }

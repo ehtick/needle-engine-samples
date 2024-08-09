@@ -1,5 +1,4 @@
-import { Behaviour, FrameEvent, GameObject, Renderer, VideoPlayer, serializable } from "@needle-tools/engine";
-import { NoColorSpace } from "three";
+import { Behaviour, Renderer, VideoPlayer, serializable } from "@needle-tools/engine";
 
 export class CombinedVideo extends Behaviour {
 
@@ -9,12 +8,15 @@ export class CombinedVideo extends Behaviour {
     @serializable(Renderer)
     renderer?: Renderer;
 
+    @serializable()
+    textureName: string = "_VideoTex";
+
     start(): void {
 
         const vidTexture = this.player?.videoTexture;
         if(vidTexture == null || this.renderer == null)
             return;
-            
-        this.renderer.sharedMaterial["_VideoTex"] = vidTexture;
+        
+        this.renderer.sharedMaterial[this.textureName] = vidTexture;
     }
 }
